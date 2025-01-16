@@ -1,0 +1,35 @@
+---
+title: "NotesTp"
+output: html_document
+date: "2025-01-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r load-usarrests, echo=TRUE}
+X = USArrests
+library(cluster)
+repam3 <- pam(X,3)
+repam3
+
+```
+
+```{r load-usarrests, echo=TRUE}
+respam3$silinfo # Silhouette information
+# Also indicates value distribution /!\ EXAM type question
+# Foreach individual indicates closest class
+
+
+plot(repam3)
+
+repam3$silinfo$width
+for(i in 2:6){
+  repam <- pam(X,i)
+  print(repam$silinfo$avg.width)
+}
+
+  ```
+
+```{r load-usarrests, echo=TRUE}

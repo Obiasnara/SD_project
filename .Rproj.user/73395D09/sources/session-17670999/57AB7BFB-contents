@@ -1,0 +1,63 @@
+---
+title: "NotesTp"
+output: html_document
+date: "2025-01-08"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# We need to use SPAM7 database
+
+```{r setup, echo=TRUE}
+knitr::opts_chunk$set(warning = TRUE, message = TRUE)
+spam7 <- read.csv("spam7.txt", sep = " ")
+
+
+library(rpart)
+
+summary(spam7)
+spam.sample <- spam7[sample(seq(1,4601),500, replace=FALSE), ]
+par(mfrow=c(2,3))
+boxplot(split(spam.sample$crl.tot,spam.sample$yesno), main="crl.tot")
+boxplot(split(spam.sample$dollar,spam.sample$yesno), main="dollar")
+boxplot(split(spam.sample$bang,spam.sample$yesno), main="bang")
+boxplot(split(spam.sample$money,spam.sample$yesno), main="money")
+boxplot(split(spam.sample$n000,spam.sample$yesno), main="n000")
+boxplot(split(spam.sample$make,spam.sample$yesno), main="make") 
+
+# Use Kmmeans to cluster the data
+library(cluster)
+spam.km <- kmeans(spam7$crl.tot, centers=2)
+spam.km$centers
+
+# Spam 6 
+spam6 = spam7[,-7]
+# spam6N = scale(spam6)
+#boxplot(split(spam.sample$crl.tot,spam.sample$yesno), main="crl.tot")
+
+
+
+
+```
+
+```{r setup, echo=TRUE}
+knitr::opts_chunk$set(warning = TRUE, message = TRUE)
+
+spam7 <- read.csv("spam7.txt", sep = " ")
+
+
+## Partie 2
+library(rpart)
+S<-spam7
+sub <- c(sample(1:max(which(S$yesno=="y")), round(0.8*max(which(S$yesno=="y")),digits=0)),
+         sample((max(which(S$yesno=="y"))+1):4601,round(0.8*length(which(S$yesno=="n")),digits=0)))
+fit <- rpart(S$yesno~ ., data=S, subset=sub)
+fit
+plot(fit) ; text(fit)
+table(predict(fit, S[-sub,], type="class"), S[-sub, "yesno"])
+
+error=( (64+69) / 921)
+error
+```

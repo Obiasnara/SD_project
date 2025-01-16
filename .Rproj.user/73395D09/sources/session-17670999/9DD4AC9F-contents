@@ -1,0 +1,203 @@
+---
+title: "Project"
+output: html_document
+date: "2025-01-15"
+---
+
+# Intro 
+
+Les données se trouvent sur cette URL :  https://archive.ics.uci.edu/dataset/149/statlog+vehicle+silhouettes
+
+
+# A) Objectif de l'analyse
+
+L'objectif du projet s'articule en cinq étapes décrites ci-dessous :
+
+## 1. Motivation et positionnement du projet  
+- As mentioned in the dataset description, this specific combination of vehicles was selected with the expectation that the bus, van, and one of the cars would be easily distinguishable, while distinguishing between the cars themselves would be more challenging. The aim of this project is to explore the dataset and identify the key features that differentiate the vehicles.
+
+### Datased attrubutes description
+
+> These details are based on my own research and might not be correct.
+
+- **Compactness**: Measures the general shape of the object. Higher values indicate a more compact shape.
+- **Circularity**: Indicates how circular the object is, based on the ratio of area to the mean radius. Values close to 1 indicate high circularity.
+- **Distance Circularity**: Ratio of the object's area to the inverse square of the average distance to the edge, measuring boundary irregularity.
+- **Radius Ratio**: Difference between maximum and minimum radii, divided by the mean radius, indicating asymmetry.
+- **Pr. Axis Aspect Ratio**: Ratio of the object's minor and major axes, reflecting its elongation or compactness.
+- **Max. Length Aspect Ratio**: Ratio of the length perpendicular to the maximum length to the maximum length, indicating object extension.
+- **Scatter Ratio**: Ratio of inertias around the minor and major axes, showing the dispersion along these axes.
+- **Elongatedness**: Measures the object's elongation based on area and width after reduction.
+- **Pr. Axis Rectangularity**: Measures how rectangular the object is around its main axis.
+- **Max. Length Rectangularity**: Measures the rectangularity relative to the maximum length and perpendicular width.
+- **Scaled Variance Along Major Axis**: Variance of point distribution along the major axis, adjusted by area.
+- **Scaled Variance Along Minor Axis**: Same as for the major axis but along the minor axis.
+- **Scaled Radius of Gyration**: Average variance of the major and minor axes divided by the area, showing the object's extent relative to its center of mass.
+- **Skewness About Major Axis**: Asymmetry of point distribution along the major axis. High values indicate significant asymmetry.
+- **Skewness About Minor Axis**: Asymmetry along the minor axis.
+- **Kurtosis About Major Axis**: Sharpness of the point distribution along the major axis. Higher values indicate more concentration.
+- **Kurtosis About Minor Axis**: Same as for the major axis but along the minor axis.
+- **Hollows Ratio**: Measures the proportion of internal "holes" or voids relative to the object's outer surface, quantifying contour complexity.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+root = "./statlog+vehicle+silhouettes/"
+names = "a;b;c;d;e;f;g;h"
+#collname <- c("COMPACTNESS", "CIRCULARITY", "DISTANCE CIRCULARITY", "RADIUS RATIO", 
+#              "PR.AXIS ASPECT RATIO", "MAX.LENGTH ASPECT RATIO", "SCATTER RATIO", 
+#              "ELONGATEDNESS", "PR.AXIS RECTANGULARITY", "MAX.LENGTH RECTANGULARITY", 
+#              "SCALED VARIANCE ALONG MAJOR AXIS", "SCALED VARIANCE ALONG MINOR AXIS", 
+#              "SCALED RADIUS OF GYRATION", "SKEWNESS ABOUT MINOR AXIS", 
+#              "SKEWNESS ABOUT MAJOR AXIS", "KURTOSIS ABOUT MINOR AXIS", 
+#              "KURTOSIS ABOUT MAJOR AXIS", "HOLLOWS RATIO", "VEHICLE TYPE")
+
+collname <- c("COMP", "CIRC", "DISTCIRC", "RADIUS", "PRAX", "MAXL", "SCAT", 
+              "ELONG", "PRREC", "MAXREC", "SVMJAX", "SVMNAX", "SRG", "SKMIN", 
+              "SKMAJ", "KURMIN", "KURMAJ", "HOL", "TYPE")
+
+
+# Construct file paths
+file_paths <- paste0(root, "xa", strsplit(names, ";")[[1]], ".dat")
+file_paths
+file_contents <- lapply(file_paths, readLines)
+
+# Flatten the nested list into a single character vector
+flattened_data <- unlist(file_contents)
+
+# Split each row into individual columns based on spaces
+split_data <- strsplit(flattened_data, "\\s+")
+
+# Convert to a data frame
+data_table <- do.call(rbind, split_data)
+
+# Optionally, assign column names
+colnames(data_table) <- paste0(collname)
+
+combined_data <- as.data.frame(data_table)
+
+```
+
+## 2. Analyse descriptive  
+- Procédez à l’analyse descriptive des données. Analysez en particulier, la distribution des différentes variables et les liens ou dépendances entre les variables.  
+- Une attention particulière sera accordée à :  
+  - La qualité et la clarté des graphiques produits.  
+  - La pertinence des outils graphiques utilisés (boxplot, histogramme, diagramme en bâtons, camembert, etc.).  
+- Donnez une interprétation claire de quelques graphiques principaux.  
+
+```{r setup, include=TRUE}
+
+histo_data <- combined_data
+
+# Missing values check
+sum(is.na(histo_data))
+histo_data
+
+# Change the type of the columns (except the last one) to numeric
+histo_data[, 1:18] <- sapply(histo_data[, 1:18], as.numeric)
+
+# Plot setup
+par(mfrow = c(5, 4), mar = c(4, 4, 2, 1))  # Adjust layout and margins
+
+# Example for compactness
+# hist(histo_data$COMPACTNESS, 
+#     main = "Distribution de la COMPACTNESS", 
+#     xlab = "COMPACTNESS", 
+#     col = "lightblue", 
+#     border = "black")
+
+histo_data_no_type = histo_data[, 1:18]
+# Plot histograms for each variable
+for (col_name in colnames(histo_data_no_type)) {
+  hist(histo_data[[col_name]], 
+       main = paste("Distribution de", col_name), 
+       xlab = col_name, 
+       col = "lightblue", 
+       border = "black")
+}
+ 
+
+```
+
+```{r setup, include=TRUE}  
+ boxplot(histo_data_no_type, 
+        main = "Boxplot des variables", 
+        col = "lightblue", 
+        border = "black")
+```
+
+## 3. Classification non supervisée  
+- Supprimez la variable classe (la variable à prédire) puis procédez à une classification non supervisée des données via les trois méthodes étudiées (kmeans, PAM et CAH).  
+- Pour chaque méthode :  
+  - Déterminez le bon nombre de profils types.  
+  - Extrayez les profils types et interprétez chacune des classes obtenues.  
+
+```{r setup, include=TRUE}
+
+# K-means clustering
+
+library(cluster)
+
+
+histo_data_no_type.km <- kmeans(histo_data_no_type, centers=2)
+print(histo_data_no_type.km)
+
+library(ggplot2)
+histo_data_no_type$cluster <- as.factor(histo_data_no_type.km$cluster)
+ggplot(histo_data_no_type, aes(x = histo_data_no_type$COMP, y = histo_data_no_type$CIRC, color = cluster)) +
+  geom_point() +
+  labs(title = "K-means Clustering Results")
+
+
+# Elbow method
+
+elbow <- function(data, max_k = 10) {
+  wss <- sapply(1:max_k, function(k){
+    kmeans(data, k)$tot.withinss
+  })
+  plot(1:max_k, wss, type = "b", 
+       xlab = "Number of clusters",
+       ylab = "Within groups sum of squares")
+}
+
+elbow(histo_data_no_type)
+# Clearly 2 clusters are enough
+
+# PAM clustering
+# Sample of 100 rows
+histo_data_no_type_100_sample <- histo_data_no_type[sample(1:nrow(histo_data_no_type), 100), ]
+
+histo_data_no_type.pam <- pam(histo_data_no_type_100_sample, k=2)
+print(histo_data_no_type.pam)
+plot(histo_data_no_type.pam)
+
+
+
+
+```
+
+
+## 4. Classification supervisée  
+- Procédez à l'apprentissage de l'arbre de classification pour la prédiction de la variable classe en fonction des variables restantes.  
+- Utilisez un protocole d'apprentissage et de tests par Bootstrap, dont vous préciserez les spécifications.  
+- Indiquez les performances (moyenne des erreurs de classification et variance des erreurs) de l'arbre appris.  
+- Visualisez puis interprétez l'arbre induit en indiquant les principales règles de décision.  
+
+## 5. Conclusion  
+- Concluez et synthétisez les résultats de votre analyse décisionnelle.  
+
+---
+
+# B) Calendrier
+
+Votre projet est à remettre par email à l'adresse **Ahlame.Douzal@imag.fr** au plus tard le **vendredi 14 février 2024 à 16h**, sous forme d’un fichier zip incluant les éléments suivants :  
+- Le manuscrit du projet en format PDF.  
+- Un répertoire **"Fig"** contenant tous les graphiques et figures générés.  
+- Un répertoire **"Source"** contenant l’ensemble de vos codes source et fonctions R utilisées.
+
+
+
+
+
+
+
