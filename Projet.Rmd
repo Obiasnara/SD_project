@@ -16,7 +16,7 @@ L'objectif du projet s'articule en cinq étapes décrites ci-dessous :
 ## 1. Motivation et positionnement du projet  
 - As mentioned in the dataset description, this specific combination of vehicles was selected with the expectation that the bus, van, and one of the cars would be easily distinguishable, while distinguishing between the cars themselves would be more challenging. The aim of this project is to explore the dataset and identify the key features that differentiate the vehicles.
 
-### Datased attrubutes description
+### Datased attributes description
 
 > These details are based on my own research and might not be correct.
 
@@ -126,6 +126,26 @@ for (col_name in colnames(histo_data_no_type)) {
         border = "black")
 ```
 
+```{r setup, include=TRUE}
+
+library(corrplot)
+
+# Enhanced descriptive statistics
+summary_stats <- data.frame(
+  Mean = sapply(histo_data_no_type, mean),
+  Median = sapply(histo_data_no_type, median),
+  StdDev = sapply(histo_data_no_type, sd),
+  Min = sapply(histo_data_no_type, min),
+  Max = sapply(histo_data_no_type, max)
+)
+print(summary_stats)
+
+# Correlation Matrix
+correlation_matrix <- cor(histo_data_no_type)
+corrplot(correlation_matrix, method = 'color', order = 'alphabet')
+
+```
+
 ## 3. Classification non supervisée  
 - Supprimez la variable classe (la variable à prédire) puis procédez à une classification non supervisée des données via les trois méthodes étudiées (kmeans, PAM et CAH).  
 - Pour chaque méthode :  
@@ -139,7 +159,7 @@ for (col_name in colnames(histo_data_no_type)) {
 library(cluster)
 
 
-histo_data_no_type.km <- kmeans(histo_data_no_type, centers=2)
+histo_data_no_type.km <- kmeans(histo_data_no_type, centers=3)
 print(histo_data_no_type.km)
 
 library(ggplot2)
@@ -166,11 +186,27 @@ elbow(histo_data_no_type)
 
 # PAM clustering
 # Sample of 100 rows
+#histo_data_no_type_100_sample <- histo_data_no_type
 histo_data_no_type_100_sample <- histo_data_no_type[sample(1:nrow(histo_data_no_type), 100), ]
 histo_data_no_type.pam <- pam(histo_data_no_type_100_sample, k=3)
 print(histo_data_no_type.pam)
 plot(histo_data_no_type.pam)
 # We have a good diagram first but also good silhouette with 'high' values meaning that the clusters are well separated
+
+# Function to calculate silhouette scores
+calculate_silhouette <- function(data, max_clusters = 10) {
+  silhouette_scores <- sapply(2:max_clusters, function(k) {
+    km <- kmeans(data, centers = k)
+    ss <- silhouette(km$cluster, dist(data))
+    mean(ss[, 3])
+  })
+  plot(2:max_clusters, silhouette_scores, 
+       type = "b", 
+       xlab = "Number of Clusters", 
+       ylab = "Average Silhouette Score")
+}
+
+calculate_silhouette(histo_data_no_type)
 
 
 # CAH ( Classification Ascendante Hiérarchique)
@@ -209,17 +245,188 @@ plot(histo_data_no_type_scaled.hc, labels = FALSE, hang = -1, main = "Original D
 plot(cent_hc, labels = FALSE, hang = -1, main = "Dendrogram of Centroids")
 par(opar)  # Restore the original plot layout
 
-# TODO Re add the TYPE and interpret the clusters
+# Detailed cluster characterization
+cluster_profile <- function(data, clusters) {
+  profiles <- data.frame(
+    Cluster = 1:length(unique(clusters)),
+    Size = table(clusters),
+    Centroids = aggregate(data, by = list(Cluster = clusters), FUN = mean)
+  )
+  return(profiles)
+}
+
+# Apply to CAH clusters
+cah_cluster_profiles <- cluster_profile(histo_data_no_type, cutTree_3_clust)
+print(cah_cluster_profiles)
+
+library(caret)
+
+# Enhanced performance evaluation
+conf_matrix <- confusionMatrix(predictions, histo_data$TYPE)
+print(conf_matrix)
+
+# Feature importance
+library(randomForest)
+rf_model <- randomForest(TYPE ~ ., data = histo_data, importance = TRUE)
+varImpPlot(rf_model)
+
+```
+---
+
+## 4. Réintégration de la variable classe et interprétation des clusters  
+Après avoir déterminé les groupes via les méthodes non supervisées (K-means, PAM, CAH), nous réintégrons la variable classe (`TYPE`) pour évaluer la correspondance entre les clusters obtenus et les types de véhicules initiaux. Cela nous permettra de comprendre si les groupes formés reflètent des différences significatives en termes de types de véhicules.
+
+```{r setup, include=TRUE}
+
+# Add the TYPE column back into the dataset
+histo_data$TYPE <- as.factor(histo_data$TYPE)
+
+# Analyze the relationship between clusters and original TYPE
+# Example for the 3 clusters from CAH
+histo_data$CAH_Cluster <- cutTree_3_clust
+
+# Cross-tabulation of original classes and clusters
+table(histo_data$TYPE, histo_data$CAH_Cluster)
+
+# Interpretation:
+# Create a summary of the clusters' characteristics based on the means of variables within each cluster
+cluster_summary <- aggregate(histo_data_no_type, by = list(Cluster = histo_data$CAH_Cluster), FUN = mean)
+
+# Print the summary for interpretation
+print(cluster_summary)
+
+# Visualize the clustering result
+ggplot(histo_data, aes(x = COMP, y = CIRC, color = CAH_Cluster)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Clusters from CAH vs. Original Vehicle Types",
+       x = "Compactness", 
+       y = "Circularity", 
+       color = "Cluster")
+
+# Compare with original TYPE distribution
+ggplot(histo_data, aes(x = COMP, y = CIRC, color = TYPE)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Original Vehicle Types Distribution",
+       x = "Compactness", 
+       y = "Circularity", 
+       color = "Vehicle Type")
 
 
 
 ```
+
+
+
+
 
 ## 4. Classification supervisée  
 - Procédez à l'apprentissage de l'arbre de classification pour la prédiction de la variable classe en fonction des variables restantes.  
 - Utilisez un protocole d'apprentissage et de tests par Bootstrap, dont vous préciserez les spécifications.  
 - Indiquez les performances (moyenne des erreurs de classification et variance des erreurs) de l'arbre appris.  
 - Visualisez puis interprétez l'arbre induit en indiquant les principales règles de décision.  
+
+```{r setup, include=TRUE}  
+
+# Prepare the data
+# Get indices for each vehicle type
+bus_indices <- which(histo_data$TYPE == "bus")
+opel_indices <- which(histo_data$TYPE == "opel")
+saab_indices <- which(histo_data$TYPE == "saab")
+van_indices <- which(histo_data$TYPE == "van")
+
+# Sample 80% of indices for each type
+c <- c(
+  sample(bus_indices, round(0.8 * length(bus_indices))),
+  sample(opel_indices, round(0.8 * length(opel_indices))),
+  sample(saab_indices, round(0.8 * length(saab_indices))),
+  sample(van_indices, round(0.8 * length(van_indices)))
+)
+
+# Fit the tree
+fit <- rpart(TYPE ~ ., data = histo_data, subset = c, method = "class")
+
+# Use rpart.plot for visualization
+rpart.plot(fit, 
+           main = "Classification Tree for Vehicle Types",
+           extra = 106,  # Show predicted class and percentage
+           fallen.leaves = TRUE)
+
+# Predict on the remaining data (test set)
+predictions <- predict(fit, histo_data[-c, ], type = "class")
+confusion_matrix <- table(predictions, histo_data$TYPE[-c])
+print("Confusion Matrix:")
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(paste("Accuracy:", round(accuracy * 100, 2), "%"))
+
+```
+
+
+## Enhanced version
+
+```{r setup, include=TRUE}  
+
+library(rpart)
+library(rpart.plot)
+
+# Bootstrap Function for Classification Tree
+bootstrap_classification_tree <- function(data, n_bootstraps = 100) {
+  # Ensure TYPE is a factor
+  data$TYPE <- as.factor(data$TYPE)
+  
+  # Initialize storage for error rates
+  classification_errors <- numeric(n_bootstraps)
+  
+  # Perform bootstrap iterations
+  for (i in 1:n_bootstraps) {
+    # Bootstrap sampling (with replacement)
+    set.seed(i)
+    bootstrap_indices <- sample(nrow(data), replace = TRUE)
+    train_data <- data[bootstrap_indices, ]
+    
+    # Identify out-of-bag sample
+    oob_indices <- setdiff(1:nrow(data), unique(bootstrap_indices))
+    test_data <- data[oob_indices, ]
+    
+    # Fit classification tree
+    fit <- rpart(TYPE ~ ., data = train_data, method = "class")
+    
+    # Predict on out-of-bag sample
+    predictions <- predict(fit, test_data, type = "class")
+    
+    # Calculate classification error
+    classification_errors[i] <- mean(predictions != test_data$TYPE)
+  }
+  
+  # Return performance metrics
+  list(
+    mean_error = mean(classification_errors),
+    error_variance = var(classification_errors)
+  )
+}
+
+# Perform bootstrap analysis
+performance <- bootstrap_classification_tree(histo_data)
+
+# Visualization of final tree
+final_tree <- rpart(TYPE ~ ., data = histo_data, method = "class")
+rpart.plot(final_tree, 
+           main = "Classification Tree for Vehicle Types",
+           extra = 106,  # Show predicted class and percentage
+           fallen.leaves = TRUE)
+
+# Detailed Accuracy Assessment
+predictions <- predict(final_tree, type = "class")
+confusion_matrix <- table(predictions, histo_data$TYPE)
+print("Confusion Matrix:")
+print(confusion_matrix)
+
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(paste("Overall Accuracy:", round(accuracy * 100, 2), "%"))
+
+```
 
 ## 5. Conclusion  
 - Concluez et synthétisez les résultats de votre analyse décisionnelle.  
@@ -228,7 +435,7 @@ par(opar)  # Restore the original plot layout
 
 # B) Calendrier
 
-Votre projet est à remettre par email à l'adresse **Ahlame.Douzal@imag.fr** au plus tard le **vendredi 14 février 2024 à 16h**, sous forme d’un fichier zip incluant les éléments suivants :  
+Votre projet est à remettre par email à l'adresse **Ahlame.Douzal@imag.fr** au plus tard le **vendredi 7 Février 2024 à 16h**, sous forme d’un fichier zip incluant les éléments suivants :  
 - Le manuscrit du projet en format PDF.  
 - Un répertoire **"Fig"** contenant tous les graphiques et figures générés.  
 - Un répertoire **"Source"** contenant l’ensemble de vos codes source et fonctions R utilisées.
