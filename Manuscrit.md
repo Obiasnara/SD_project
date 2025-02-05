@@ -326,7 +326,7 @@ We then calculate the accuracy of the model based on the confusion matrix.
 accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
 ```
 
-We do get an accuracy of 67.33% which is quite good for a first model. And we can also add that the model is quite good in identifying buses and vans, but struggles a bit more to differenciate  Opel and Saab (Group of data in the center of the matrix). Well, this all makes sense, here are example of each type of vehicle:
+We do get an accuracy of 67%+ which is quite good for a first model. And we can also add that the model is quite good in identifying buses and vans, but struggles a bit more to differenciate  Opel and Saab (Group of data in the center of the matrix). Well, this all makes sense, here are example of each type of vehicle:
 
 - Bus: 
 
@@ -340,6 +340,31 @@ We do get an accuracy of 67.33% which is quite good for a first model. And we ca
 - Van: 
 
 ![van](./images/van.png)
+
+
+To improve the accuracy calculation, we can test with different samples of the data : 
+```r
+function_test_samples_accuracy <- function(samples_size) {
+  samples_list <- lapply(1:samples_size, function(i) {
+    c(
+      sample(bus_indices, round(0.8 * length(bus_indices))),
+      sample(opel_indices, round(0.8 * length(opel_indices))),
+      sample(saab_indices, round(0.8 * length(saab_indices))),
+      sample(van_indices, round(0.8 * length(van_indices)))
+    )
+  })
+  for (c in samples_list) {
+    fit <- rpart(TYPE ~ ., data = histo_data, subset = c, method = "class")
+    predictions <- predict(fit, histo_data[-c, ], type = "class")
+    confusion_matrix <- table(predictions, histo_data$TYPE[-c])
+    accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+    accuracies <- c(accuracies, accuracy)
+  }
+  return(accuracies)
+}
+```
+
+We do get a mean accuracy of 67%+ (for 10 and 100 size) which is quite good for a first model.
 
 
 ## 5. Conclusion
@@ -363,7 +388,7 @@ This project explored the **Statlog (Vehicle Silhouettes) dataset**, aiming to d
    - **CAH** was the least effective, producing mixed clusters.  
 
 3. **Supervised Classification (Decision Trees):**  
-   - Achieved **67.33% accuracy**, successfully identifying **buses and vans** but struggling to differentiate **Opel and Saab** (as expected).  
+   - Achieved **67%+ accuracy**, successfully identifying **buses and vans** but struggling to differentiate **Opel and Saab** (as expected).  
    - Key decision factors included **Elongatedness, Aspect Ratios, and Hollows Ratio**.  
 
 ### **Final Thoughts & Future Work:**  

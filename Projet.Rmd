@@ -326,7 +326,8 @@ ggplot(histo_data, aes(x = COMP, y = CIRC, color = TYPE)) +
 - Visualisez puis interprétez l'arbre induit en indiquant les principales règles de décision.  
 
 ```{r setup, include=TRUE}  
-
+library(rpart)
+library(rpart.plot)
 # Prepare the data
 # Get indices for each vehicle type
 bus_indices <- which(histo_data$TYPE == "bus")
