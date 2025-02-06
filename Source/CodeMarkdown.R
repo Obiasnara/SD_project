@@ -1,0 +1,226 @@
+#########################################################################
+######################   Libraries import    ############################
+#########################################################################
+library(corrplot)                # For correlation matrix visualization #
+library(cluster)                 # For k-means clustering               #
+library(ggplot2)                 # For plotting                         #
+library(rpart)                   # For decision trees                   #
+library(rpart.plot)              # For plotting decision trees          #
+#########################################################################
+
+#########################################################################
+#####################   Data import & Setup    ##########################
+#########################################################################
+root = "./statlog+vehicle+silhouettes/" 
+names = "a;b;c;d;e;f;g;h" # Names of the different files in the folder
+
+collname <- c("COMP", "CIRC", "DISTCIRC", "RADIUS", "PRAX", "MAXL", "SCAT", 
+              "ELONG", "PRREC", "MAXREC", "SVMJAX", "SVMNAX", "SRG", "SKMIN", 
+              "SKMAJ", "KURMIN", "KURMAJ", "HOL", "TYPE")
+
+# Construct file paths
+file_paths <- paste0(root, "xa", strsplit(names, ";")[[1]], ".dat")
+file_contents <- lapply(file_paths, readLines)
+# Flatten the nested list into a single character vector
+flattened_data <- unlist(file_contents)
+# Split each row into individual columns based on spaces
+split_data <- strsplit(flattened_data, "\\s+")
+# Convert to a data frame
+data_table <- do.call(rbind, split_data)
+# Assign column names (optional)
+colnames(data_table) <- paste0(collname)
+
+combined_data <- as.data.frame(data_table)
+
+# Copy the data to a new variable (to avoid modifying the original data)
+histo_data <- combined_data
+
+# Missing values check
+sum(is.na(histo_data)) # Should be 0
+
+# Change the type of the columns (except the last one) to numeric
+# This is necessary for the clustering algorithms to work properly
+histo_data[, 1:18] <- sapply(histo_data[, 1:18], as.numeric)
+
+# Remove the last column (TYPE) from the data (since it's a categorical variable)
+histo_data_no_type = histo_data[, 1:18]
+#########################################################################
+
+#########################################################################
+#####################   Descriptive analysis    #########################
+#########################################################################
+# Filter the interesting columns for the descriptive analysis
+interesting_columns = c("COMP","CIRC","PRAX","SRG","SKMAJ","HOL")
+
+# Plot layout settings
+par(mfrow = c(3, 2), mar = c(4, 4, 2, 1))  
+
+# Histograms for the interesting columns
+for (col_name in colnames(histo_data_no_type[, interesting_columns])) {
+  hist(histo_data[[col_name]], 
+       main = paste("Histogram of ", col_name), 
+       xlab = col_name, 
+       col = "lightblue", 
+       border = "black")
+}
+
+par(mfrow = c(1, 1), mar = c(4, 4, 2, 1))  # Reset layout and margins
+
+# Boxplot for the interesting columns
+boxplot(histo_data_no_type[, interesting_columns], 
+        main = "Boxplot", 
+        col = "lightblue", 
+        border = "black")
+
+# Correlation matrix
+cor_matrix <- cor(histo_data[, interesting_columns])
+
+# Heatmap of the correlation matrix
+corrplot(cor_matrix, method = "color", type = "upper", 
+         tl.cex = 0.8, tl.col = "black", 
+         col = colorRampPalette(c("blue", "white", "red"))(200))
+
+# Scatterplot matrix (pairs plot)
+pairs(histo_data[, interesting_columns], pch = 19, col = rgb(0, 0, 1, 0.5))
+
+#########################################################################
+###########################     KMEANS    ##############################
+#########################################################################
+# Elbow method
+elbow <- function(data, max_k = 10) {
+  wss <- sapply(1:max_k, function(k){
+    kmeans(data, k)$tot.withinss
+  })
+  plot(1:max_k, wss, type = "b", 
+       xlab = "Number of clusters",
+       ylab = "Within groups sum of squares")
+}
+
+elbow(histo_data_no_type)
+# Elbow starts at 2 and ends at 5, plateau is at around 3
+
+histo_data_no_type_copy <- histo_data_no_type
+# Apply k-means clustering with 3 clusters
+histo_data_no_type.km <- kmeans(histo_data_no_type, centers=3)
+histo_data_no_type_copy$cluster <- as.factor(histo_data_no_type.km$cluster)
+
+# Plot the clusters
+ggplot(histo_data_no_type_copy, aes(x = histo_data_no_type_copy$COMP, y = histo_data_no_type_copy$CIRC, color = cluster)) +
+  geom_point() +
+  labs(title = "K-means Clustering Results")
+
+#########################################################################
+###########################       PAM      ##############################
+#########################################################################
+# Sample of 100 rows (for silhouette calculation, else its not displayed)
+histo_data_no_type_100_sample <- histo_data_no_type[sample(1:nrow(histo_data_no_type), 100), ]
+# Apply PAM clustering with 3 clusters
+histo_data_no_type.pam <- pam(histo_data_no_type_100_sample, k=3)
+# Plot the clusters
+plot(histo_data_no_type.pam)
+
+# Function to calculate silhouette scores
+calculate_silhouette <- function(data, max_clusters) {
+  max_clusters <- max_clusters # Weird bug, if not redefined, so it's redefined here
+  silhouette_scores <- sapply(2:max_clusters, function(k) {
+    km <- kmeans(data, centers = k)
+    ss <- silhouette(km$cluster, dist(data))
+    mean(ss[, 3])
+  })
+  plot(2:max_clusters, silhouette_scores, 
+       type = "b", 
+       xlab = "Number of Clusters", 
+       ylab = "Average Silhouette Score")
+}
+
+calculate_silhouette(histo_data_no_type, 10)
+
+#########################################################################
+###########################       CAH      ##############################
+#########################################################################
+# Dendrogram on 100 samples from before
+histo_data_no_type_scaled <- scale(histo_data_no_type)
+# Calculate the distance matrix
+distance_matrix <- dist(histo_data_no_type_scaled)
+# Hierarchical clustering
+histo_data_no_type_scaled.hc <- hclust(distance_matrix, method = "ward.D2")
+# Plot the dendrogram
+plot(histo_data_no_type_scaled.hc)
+
+
+
+# Cut the dendrogram into 3 and 4 clusters
+cutTree_3_clust <- cutree(histo_data_no_type_scaled.hc, k = 3)
+cutTree_4_clust <- cutree(histo_data_no_type_scaled.hc, k = 4)
+
+table(cutTree_3_clust)
+table(cutTree_4_clust)
+
+# Calculate the centroids of the clusters
+cent_3 <- NULL
+for(k in 1:3) {
+  cent_3 <- rbind(cent_3, colMeans(histo_data_no_type_scaled[cutTree_3_clust == k, , drop = FALSE]))
+}
+cent_3
+
+# Hierarchical clustering on centroids (centroid linkage)
+cent_hc <- hclust(dist(cent_3), method = "cen")
+
+opar <- par(mfrow = c(1, 2))
+# Plot the original and new dendrogram (based on centroids)
+plot(histo_data_no_type_scaled.hc, labels = FALSE, hang = -1, main = "Original Dendrogram")
+plot(cent_hc, labels = FALSE, hang = -1, main = "Dendrogram of Centroids")
+
+
+#########################################################################
+###################       Class reintegration      ######################
+#########################################################################
+# Re-do the clustering with the whole dataset
+histo_data$TYPE <- as.factor(histo_data$TYPE)
+histo_data.km <- kmeans(histo_data_no_type, centers = 4, nstart = 10)
+histo_data$Cluster_KM <- as.factor(histo_data.km$cluster)
+histo_data.pam <- pam(histo_data_no_type, k = 4)
+histo_data$Cluster_PAM <- as.factor(histo_data.pam$clustering)
+histo_data_scaled <- scale(histo_data_no_type)
+distance_matrix <- dist(histo_data_scaled)
+histo_data.hc <- hclust(distance_matrix, method = "ward.D2")
+cut_clusters <- cutree(histo_data.hc, k = 3)
+histo_data$Cluster_HC <- as.factor(cut_clusters)
+
+# Check the distribution of vehicle types in each cluster
+table(histo_data$Cluster_KM, histo_data$TYPE)
+table(histo_data$Cluster_PAM, histo_data$TYPE)
+table(histo_data$Cluster_HC, histo_data$TYPE)
+
+
+#########################################################################
+###########################   Supervised   ##############################
+#########################################################################
+# Get indices for each vehicle type
+bus_indices <- which(histo_data$TYPE == "bus")
+opel_indices <- which(histo_data$TYPE == "opel")
+saab_indices <- which(histo_data$TYPE == "saab")
+van_indices <- which(histo_data$TYPE == "van")
+
+function_test_samples_accuracy <- function(samples_size) {
+  accuracies <- c() # Store the accuracies of each iteration
+  samples_list <- lapply(1:samples_size, function(i) {
+    c(
+      sample(bus_indices, round(0.8 * length(bus_indices))),
+      sample(opel_indices, round(0.8 * length(opel_indices))),
+      sample(saab_indices, round(0.8 * length(saab_indices))),
+      sample(van_indices, round(0.8 * length(van_indices)))
+    )
+  })
+  for (c in samples_list) {
+    fit <- rpart(TYPE ~ ., data = histo_data, subset = c, method = "class")
+    predictions <- predict(fit, histo_data[-c, ], type = "class")
+    confusion_matrix <- table(predictions, histo_data$TYPE[-c])
+    accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+    accuracies <- c(accuracies, accuracy)
+  }
+  return(accuracies)
+}
+
+accuracies <- function_test_samples_accuracy(1)
+print(paste("Mean Accuracy:", mean(accuracies) * 100, "%"))

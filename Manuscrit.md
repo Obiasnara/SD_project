@@ -1,6 +1,36 @@
 # Data Analysis Project
 
-## Introduction
+- [Data Analysis Project](#data-analysis-project)
+  - [1. Introduction](#1-introduction)
+      - [1. Motivation](#1-motivation)
+      - [2. Datased attributes description](#2-datased-attributes-description)
+  - [2. Analyse descriptive](#2-analyse-descriptive)
+    - [2.1 Top 6 Features and Why](#21-top-6-features-and-why)
+    - [2.2 Histograms are useful for understanding the distribution of each variable.](#22-histograms-are-useful-for-understanding-the-distribution-of-each-variable)
+    - [2.3 Boxplots are useful for visualizing the spread of data and identifying outliers.](#23-boxplots-are-useful-for-visualizing-the-spread-of-data-and-identifying-outliers)
+    - [2.4 Correlation Matrix are useful for identifying relationships between variables.](#24-correlation-matrix-are-useful-for-identifying-relationships-between-variables)
+    - [2.5 Scatter Plots are useful for visualizing relationships between two variables.](#25-scatter-plots-are-useful-for-visualizing-relationships-between-two-variables)
+  - [3. Unsupervised classification](#3-unsupervised-classification)
+    - [3.1 K-Means Clustering](#31-k-means-clustering)
+    - [3.2 Partitioning Around Medoids (PAM) Clustering](#32-partitioning-around-medoids-pam-clustering)
+      - [PAM Clustering with 2 Clusters](#pam-clustering-with-2-clusters)
+      - [PAM Clustering with 3 Clusters](#pam-clustering-with-3-clusters)
+      - [PAM Clustering with 4 Clusters](#pam-clustering-with-4-clusters)
+      - [PAM Clustering results](#pam-clustering-results)
+    - [3.3 Classification Ascendante Hiérarchique (CAH)](#33-classification-ascendante-hiérarchique-cah)
+    - [3.4 Reintegrate the class variable and interpret the results](#34-reintegrate-the-class-variable-and-interpret-the-results)
+      - [3.4.1 Cluster Quality Analysis](#341-cluster-quality-analysis) 
+      - [3.4.2 K-Means Clustering](#342-k-means-clustering)
+      - [3.4.2 PAM Clustering](#342-pam-clustering)
+      - [3.4.3 Hierarchical Clustering (CAH)](#343-hierarchical-clustering-cah)
+      - [3.4.5 Final Comparison](#345-final-comparison)
+  - [4. Supervised classification](#4-supervised-classification)
+    - [4.1 Classification with Decision Trees](#41-classification-with-decision-trees)
+  - [5. Conclusion](#5-conclusion)
+    - [**Key Findings:**](#key-findings)
+    - [**Final Thoughts & Future Work:**](#final-thoughts--future-work)
+
+## 1. Introduction
 
 In this project, we analyze data from different vehicles obtained from the [Statlog (Vehicle Silhouettes) dataset](https://archive.ics.uci.edu/dataset/149/statlog+vehicle+silhouettes). 
 
@@ -69,7 +99,7 @@ Useful for identifying hollow vs. solid structures.
 ### 2.2 Histograms are useful for understanding the distribution of each variable.
 
 
-![histogram](./images/data_distribution.png)
+![histogram](./Fig/data_distribution.png)
 
 
 - COMP: The histogram indicates a range of values with a peak frequency around 85-90.
@@ -86,7 +116,7 @@ Useful for identifying hollow vs. solid structures.
 
 ### 2.3 Boxplots are useful for visualizing the spread of data and identifying outliers.
 
-![boxplot](./images/boxplot_descriptive_analysis.png)
+![boxplot](./Fig/boxplot_descriptive_analysis.png)
 
 
 
@@ -96,17 +126,17 @@ The other variables have more balanced distributions.
 
 Outliers: Dots outside the whiskers suggest extreme values that may need further investigation. We can spot a few outliers in PR. Axis Aspect Ratio. Some elements are significantly elongated compared to the rest, this still makes sense as some buses and vans are quite long.
 
-![whiskers](./images/boxplot_spec.png)
+![whiskers](./Fig/boxplot_spec.png)
 
 ### 2.4 Correlation Matrix are useful for identifying relationships between variables.
 
-![correlation](./images/corr_matrix_analysis.png)
+![correlation](./Fig/corr_matrix_analysis.png)
 
 This matrix helps in understanding the relationships between variables. For instance, if COMP and CIRC have a high positive correlation, it suggests that as compactness increases, circularity also tends to increase. This trend is also visible in the scatter plot.
 
 ### 2.5 Scatter Plots are useful for visualizing relationships between two variables.
 
-![scatter](./images/pairs_analysis.png)
+![scatter](./Fig/pairs_analysis.png)
 
 The scatter plots show the relationships between different variables. As mentionned before, COMP and CIRC have a positive correlation, indicating that as compactness increases, circularity also tends to increase. This relationship is visible in the scatter plot, where the points form a diagonal line. The correlation between CIRC and SRG is also remarkable, with a clear positive trend.
 
@@ -120,11 +150,11 @@ We can still identify 'groups' on the PRAX line, this is because the range of PR
 
 To identify distinct groups within the dataset, we first apply the elbow method to determine the optimal number of clusters.
 
-![elbow](./images/elbow_unsupervised.png)
+![elbow](./Fig/elbow_unsupervised.png)
 
 The elbow method suggests that the optimal number of clusters is 3. We then apply the K-means algorithm with 3 clusters to classify the data.
 
-![kmeans](./images/kmeans_unsupervised.png)
+![kmeans](./Fig/kmeans_unsupervised.png)
 
 We can see that the K-means algorithm has successfully clustered the data into 3 distinct groups. The scatter plot shows the separation between the clusters, with each group clearly defined. This seems again logical as we have 3 types of vehicles to classify (bus, van, and cars).
 
@@ -134,22 +164,22 @@ We also apply the Partitioning Around Medoids (PAM) algorithm to classify the da
 
 #### PAM Clustering with 2 Clusters
 
-![pam2](./images/pam_clustplot2k_unsupervised.png)
-![pam2](./images/SilhouettePAM2k.png)
+![pam2](./Fig/pam_clustplot2k_unsupervised.png)
+![pam2](./Fig/SilhouettePAM2k.png)
 
 The PAM algorithm with 2 clusters shows a clear separation between the two groups. The silhouette plot indicates that the clusters are well-defined and distinct.
 
 #### PAM Clustering with 3 Clusters
 
-![pam3](./images/pam_clustplot3k_unsupervised.png)
-![pam3](./images/SilhouettePAM3k.png)
+![pam3](./Fig/pam_clustplot3k_unsupervised.png)
+![pam3](./Fig/SilhouettePAM3k.png)
 
 The PAM algorithm with 3 clusters also shows a clear separation between the groups. The silhouette plot confirms that the clusters are distinct and well-separated.
 
 #### PAM Clustering with 4 Clusters
 
-![pam4](./images/pam_clustplot4k_unsupervised.png)
-![pam4](./images/SilhouettePAM4k.png)
+![pam4](./Fig/pam_clustplot4k_unsupervised.png)
+![pam4](./Fig/SilhouettePAM4k.png)
 
 The PAM algorithm with 4 clusters further divides the data into more specific groups. The silhouette plot indicates that the clusters are still distinct and well-defined. But we do see some outliers in the cluster plot.
 
@@ -177,7 +207,7 @@ calculate_silhouette <- function(data, max_clusters = 10) {
 }
 ```
 
-![silhouette](./images/pam_silhouette_calculation.png)
+![silhouette](./Fig/pam_silhouette_calculation.png)
 
 This graph shows that the silhouette score is highest for 2 clusters (which is not surprising as the silhouette score is a measure of how similar an object is to its own cluster compared to other clusters). But as we've seen before, 3 clusters is the most logical choice for this dataset and still has the second-highest silhouette score.
 
@@ -185,7 +215,7 @@ This graph shows that the silhouette score is highest for 2 clusters (which is n
 
 The CAH algorithm is another unsupervised classification method that groups similar data points together. We apply the CAH algorithm to the dataset to identify distinct clusters.
 
-![dendrogram](./images/cah_cluter_dendogram_unsupervised.png)
+![dendrogram](./Fig/cah_cluter_dendogram_unsupervised.png)
 
 We then cur the tree at 3 clusters to classify the data.
 ```r
@@ -262,7 +292,7 @@ Looking at the contingency tables, we assess how well each clustering method cor
 
 ---
 
-### **Final Comparison**  
+### **3.4.5 Final Comparison**  
 | Method  | Best for Vans | Best for Opels & Saabs | Best Overall Separation |
 |---------|--------------|----------------------|-------------------------|
 | **K-Means**  | ✅ (174 Vans) | ❌ (Mixed Opel/Saab) | 🟡 Moderate |
@@ -298,7 +328,7 @@ sample(OUR_INDEX, round(0.8 * length(OUR_INDEX)))
 
 Create the decision tree 
 
-![decision_tree](./images/decision_tree_supervised.png)
+![decision_tree](./Fig/decision_tree_supervised.png)
 
 Main decision tree characteristics:
 - **Root Node**: The first decision point based on the most significant attribute. (ELONGATEDNESS < 42) 
@@ -306,6 +336,8 @@ Main decision tree characteristics:
 MAX.LENGTH.ASPECT.RATIO < 8 and < 9 that separates the first two branches.
 - **SCALED VARIANCE ALONG MINOR AXIS**: This node separates 41% of the data. Is on SVMNAX >= 306.
 - **HOLLOW.RATIO**: The next major decision point that further divides the branches. Is on HOL < 199 that separates 33% of the data.
+
+> We can see that the characteristics we chosen as 'important' in the first part of the analysis are not all present in the decision tree. This is an obvious error on my side, I should have kept all the data from the beginning.
 
 The Decision Tree model provides a clear classification of the vehicles based on the dataset attributes. The tree structure shows the decision-making process for classifying the vehicles into different types.
 
@@ -330,16 +362,21 @@ We do get an accuracy of 67%+ which is quite good for a first model. And we can 
 
 - Bus: 
 
-![bus](./images/bus.jpg)
+
+<img src="./Fig/bus.jpg" alt="drawing" width="200"/>
+
 - Opel: 
 
-![opel](./images/opel.jpeg)
+<img src="./Fig/opel.jpeg" alt="drawing" width="200"/>
+
 - Saab: 
 
-![saab](./images/saab.jpg)
+<img src="./Fig/saab.jpg" alt="drawing" width="200"/>
+
 - Van: 
 
-![van](./images/van.png)
+<img src="./Fig/van.png" alt="drawing" width="200"/>
+
 
 
 To improve the accuracy calculation, we can test with different samples of the data : 
@@ -366,18 +403,11 @@ function_test_samples_accuracy <- function(samples_size) {
 
 We do get a mean accuracy of 67%+ (for 10 and 100 size) which is quite good for a first model.
 
-
-## 5. Conclusion
-
-Here's a conclusion for your data analysis project:  
-
----
-
 ## 5. Conclusion  
 
 This project explored the **Statlog (Vehicle Silhouettes) dataset**, aiming to distinguish between four types of vehicles (**bus, Opel, Saab, and van**) using **descriptive analysis, unsupervised clustering, and supervised classification**.  
 
-### **Key Findings:**  
+### Key Findings:
 1. **Feature Importance:**  
    - Compactness, Circularity, and Axis Ratios were among the most relevant features for distinguishing vehicle types.  
    - Histograms and boxplots highlighted variations, especially between vans and cars.  
@@ -391,7 +421,7 @@ This project explored the **Statlog (Vehicle Silhouettes) dataset**, aiming to d
    - Achieved **67%+ accuracy**, successfully identifying **buses and vans** but struggling to differentiate **Opel and Saab** (as expected).  
    - Key decision factors included **Elongatedness, Aspect Ratios, and Hollows Ratio**.  
 
-### **Final Thoughts & Future Work:**  
+### Final Thoughts & Future Work:
 - The clustering results confirm that **vans are the most distinguishable category**, while Opel and Saab are harder to separate.  
 - The decision tree model provides **a solid baseline** but could be improved with **more advanced classifiers**
 

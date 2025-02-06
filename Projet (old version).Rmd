@@ -1,0 +1,449 @@
+---
+title: "Project"
+output: html_document
+date: "2025-01-15"
+---
+
+# Intro 
+
+Les données se trouvent sur cette URL :  https://archive.ics.uci.edu/dataset/149/statlog+vehicle+silhouettes
+
+
+# A) Objectif de l'analyse
+
+L'objectif du projet s'articule en cinq étapes décrites ci-dessous :
+
+## 1. Motivation et positionnement du projet  
+- As mentioned in the dataset description, this specific combination of vehicles was selected with the expectation that the bus, van, and one of the cars would be easily distinguishable, while distinguishing between the cars themselves would be more challenging. The aim of this project is to explore the dataset and identify the key features that differentiate the vehicles.
+
+### Datased attributes description
+
+> These details are based on my own research and might not be correct.
+
+- **Compactness**: Measures the general shape of the object. Higher values indicate a more compact shape.
+- **Circularity**: Indicates how circular the object is, based on the ratio of area to the mean radius. Values close to 1 indicate high circularity.
+- **Distance Circularity**: Ratio of the object's area to the inverse square of the average distance to the edge, measuring boundary irregularity.
+- **Radius Ratio**: Difference between maximum and minimum radii, divided by the mean radius, indicating asymmetry.
+- **Pr. Axis Aspect Ratio**: Ratio of the object's minor and major axes, reflecting its elongation or compactness.
+- **Max. Length Aspect Ratio**: Ratio of the length perpendicular to the maximum length to the maximum length, indicating object extension.
+- **Scatter Ratio**: Ratio of inertias around the minor and major axes, showing the dispersion along these axes.
+- **Elongatedness**: Measures the object's elongation based on area and width after reduction.
+- **Pr. Axis Rectangularity**: Measures how rectangular the object is around its main axis.
+- **Max. Length Rectangularity**: Measures the rectangularity relative to the maximum length and perpendicular width.
+- **Scaled Variance Along Major Axis**: Variance of point distribution along the major axis, adjusted by area.
+- **Scaled Variance Along Minor Axis**: Same as for the major axis but along the minor axis.
+- **Scaled Radius of Gyration**: Average variance of the major and minor axes divided by the area, showing the object's extent relative to its center of mass.
+- **Skewness About Major Axis**: Asymmetry of point distribution along the major axis. High values indicate significant asymmetry.
+- **Skewness About Minor Axis**: Asymmetry along the minor axis.
+- **Kurtosis About Major Axis**: Sharpness of the point distribution along the major axis. Higher values indicate more concentration.
+- **Kurtosis About Minor Axis**: Same as for the major axis but along the minor axis.
+- **Hollows Ratio**: Measures the proportion of internal "holes" or voids relative to the object's outer surface, quantifying contour complexity.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+root = "./statlog+vehicle+silhouettes/"
+names = "a;b;c;d;e;f;g;h"
+#collname <- c("COMPACTNESS", "CIRCULARITY", "DISTANCE CIRCULARITY", "RADIUS RATIO", 
+#              "PR.AXIS ASPECT RATIO", "MAX.LENGTH ASPECT RATIO", "SCATTER RATIO", 
+#              "ELONGATEDNESS", "PR.AXIS RECTANGULARITY", "MAX.LENGTH RECTANGULARITY", 
+#              "SCALED VARIANCE ALONG MAJOR AXIS", "SCALED VARIANCE ALONG MINOR AXIS", 
+#              "SCALED RADIUS OF GYRATION", "SKEWNESS ABOUT MINOR AXIS", 
+#              "SKEWNESS ABOUT MAJOR AXIS", "KURTOSIS ABOUT MINOR AXIS", 
+#              "KURTOSIS ABOUT MAJOR AXIS", "HOLLOWS RATIO", "VEHICLE TYPE")
+
+collname <- c("COMP", "CIRC", "DISTCIRC", "RADIUS", "PRAX", "MAXL", "SCAT", 
+              "ELONG", "PRREC", "MAXREC", "SVMJAX", "SVMNAX", "SRG", "SKMIN", 
+              "SKMAJ", "KURMIN", "KURMAJ", "HOL", "TYPE")
+
+
+# Construct file paths
+file_paths <- paste0(root, "xa", strsplit(names, ";")[[1]], ".dat")
+file_paths
+file_contents <- lapply(file_paths, readLines)
+
+# Flatten the nested list into a single character vector
+flattened_data <- unlist(file_contents)
+
+# Split each row into individual columns based on spaces
+split_data <- strsplit(flattened_data, "\\s+")
+
+# Convert to a data frame
+data_table <- do.call(rbind, split_data)
+
+# Optionally, assign column names
+colnames(data_table) <- paste0(collname)
+
+combined_data <- as.data.frame(data_table)
+
+```
+
+## 2. Analyse descriptive  
+- Procédez à l’analyse descriptive des données. Analysez en particulier, la distribution des différentes variables et les liens ou dépendances entre les variables.  
+- Une attention particulière sera accordée à :  
+  - La qualité et la clarté des graphiques produits.  
+  - La pertinence des outils graphiques utilisés (boxplot, histogramme, diagramme en bâtons, camembert, etc.).  
+- Donnez une interprétation claire de quelques graphiques principaux.  
+
+```{r setup, include=TRUE}
+
+histo_data <- combined_data
+
+# Missing values check
+sum(is.na(histo_data))
+histo_data
+
+# Change the type of the columns (except the last one) to numeric
+histo_data[, 1:18] <- sapply(histo_data[, 1:18], as.numeric)
+
+# Plot setup
+par(mfrow = c(5, 4), mar = c(4, 4, 2, 1))  # Adjust layout and margins
+
+# Example for compactness
+# hist(histo_data$COMPACTNESS, 
+#     main = "Distribution de la COMPACTNESS", 
+#     xlab = "COMPACTNESS", 
+#     col = "lightblue", 
+#     border = "black")
+
+histo_data_no_type = histo_data[, 1:18]
+# Plot histograms for each variable
+for (col_name in colnames(histo_data_no_type)) {
+  hist(histo_data[[col_name]], 
+       main = paste("Distribution de", col_name), 
+       xlab = col_name, 
+       col = "lightblue", 
+       border = "black")
+}
+ 
+
+```
+
+```{r setup, include=TRUE}  
+ boxplot(histo_data_no_type, 
+        main = "Boxplot des variables", 
+        col = "lightblue", 
+        border = "black")
+```
+
+```{r setup, include=TRUE}
+
+library(corrplot)
+
+# Enhanced descriptive statistics
+summary_stats <- data.frame(
+  Mean = sapply(histo_data_no_type, mean),
+  Median = sapply(histo_data_no_type, median),
+  StdDev = sapply(histo_data_no_type, sd),
+  Min = sapply(histo_data_no_type, min),
+  Max = sapply(histo_data_no_type, max)
+)
+print(summary_stats)
+
+# Correlation Matrix
+correlation_matrix <- cor(histo_data_no_type)
+corrplot(correlation_matrix, method = 'color', order = 'alphabet')
+
+```
+
+## 3. Classification non supervisée  
+- Supprimez la variable classe (la variable à prédire) puis procédez à une classification non supervisée des données via les trois méthodes étudiées (kmeans, PAM et CAH).  
+- Pour chaque méthode :  
+  - Déterminez le bon nombre de profils types.  
+  - Extrayez les profils types et interprétez chacune des classes obtenues.  
+
+```{r setup, include=TRUE}
+
+# K-means clustering
+
+library(cluster)
+
+
+histo_data_no_type.km <- kmeans(histo_data_no_type, centers=3)
+print(histo_data_no_type.km)
+
+library(ggplot2)
+histo_data_no_type_copy <- histo_data_no_type
+histo_data_no_type_copy$cluster <- as.factor(histo_data_no_type.km$cluster)
+ggplot(histo_data_no_type_copy, aes(x = histo_data_no_type_copy$COMP, y = histo_data_no_type_copy$CIRC, color = cluster)) +
+  geom_point() +
+  labs(title = "K-means Clustering Results")
+
+
+# Elbow method
+
+elbow <- function(data, max_k = 10) {
+  wss <- sapply(1:max_k, function(k){
+    kmeans(data, k)$tot.withinss
+  })
+  plot(1:max_k, wss, type = "b", 
+       xlab = "Number of clusters",
+       ylab = "Within groups sum of squares")
+}
+
+elbow(histo_data_no_type)
+# Elbow starts at 2 and ends at 5, plateau is at around 3
+
+# PAM clustering
+# Sample of 100 rows
+#histo_data_no_type_100_sample <- histo_data_no_type
+histo_data_no_type_100_sample <- histo_data_no_type[sample(1:nrow(histo_data_no_type), 100), ]
+histo_data_no_type.pam <- pam(histo_data_no_type_100_sample, k=3)
+print(histo_data_no_type.pam)
+plot(histo_data_no_type.pam)
+# We have a good diagram first but also good silhouette with 'high' values meaning that the clusters are well separated
+
+# Function to calculate silhouette scores
+calculate_silhouette <- function(data, max_clusters = 10) {
+  silhouette_scores <- sapply(2:max_clusters, function(k) {
+    km <- kmeans(data, centers = k)
+    ss <- silhouette(km$cluster, dist(data))
+    mean(ss[, 3])
+  })
+  plot(2:max_clusters, silhouette_scores, 
+       type = "b", 
+       xlab = "Number of Clusters", 
+       ylab = "Average Silhouette Score")
+}
+
+calculate_silhouette(histo_data_no_type)
+
+
+# CAH ( Classification Ascendante Hiérarchique)
+
+#Dendrogram on 100 samples from before
+histo_data_no_type_scaled <- scale(histo_data_no_type)
+distance_matrix <- dist(histo_data_no_type_scaled)
+histo_data_no_type_scaled.hc <- hclust(distance_matrix, method = "ward.D2")
+plot(histo_data_no_type_scaled.hc)
+# We get a good dendrogram with 3 obvious clusters, we could also try with 4 clusters
+
+cutTree_3_clust <- cutree(histo_data_no_type_scaled.hc, k = 3) # We desire 3 groups
+cutTree_4_clust <- cutree(histo_data_no_type_scaled.hc, k = 4) # We desire 4 groups
+
+# Display the number of elements in each cluster
+table(cutTree_3_clust)
+#  1   2   3 
+# 376 214 162 
+table(cutTree_4_clust)
+#  1   2   3   4 
+# 376 206   8 162 
+# Wreirdly, one of the branches of the 4 cluster is relatively small, so I would consider to chose 3 clusters.
+
+cent_3 <- NULL
+for(k in 1:3) {
+  cent_3 <- rbind(cent_3, colMeans(histo_data_no_type_scaled[cutTree_3_clust == k, , drop = FALSE]))
+}
+cent_3
+
+# Hierarchical clustering on centroids (centroid linkage)
+cent_hc <- hclust(dist(cent_3), method = "cen")
+
+# Plot the original and new dendrogram (based on centroids)
+opar <- par(mfrow = c(1, 2))  # Set layout to display two plots
+plot(histo_data_no_type_scaled.hc, labels = FALSE, hang = -1, main = "Original Dendrogram")
+plot(cent_hc, labels = FALSE, hang = -1, main = "Dendrogram of Centroids")
+par(opar)  # Restore the original plot layout
+
+# Detailed cluster characterization
+cluster_profile <- function(data, clusters) {
+  profiles <- data.frame(
+    Cluster = 1:length(unique(clusters)),
+    Size = table(clusters),
+    Centroids = aggregate(data, by = list(Cluster = clusters), FUN = mean)
+  )
+  return(profiles)
+}
+
+# Apply to CAH clusters
+cah_cluster_profiles <- cluster_profile(histo_data_no_type, cutTree_3_clust)
+print(cah_cluster_profiles)
+
+library(caret)
+
+# Enhanced performance evaluation
+conf_matrix <- confusionMatrix(predictions, histo_data$TYPE)
+print(conf_matrix)
+
+# Feature importance
+library(randomForest)
+rf_model <- randomForest(TYPE ~ ., data = histo_data, importance = TRUE)
+varImpPlot(rf_model)
+
+```
+---
+
+## 4. Réintégration de la variable classe et interprétation des clusters  
+Après avoir déterminé les groupes via les méthodes non supervisées (K-means, PAM, CAH), nous réintégrons la variable classe (`TYPE`) pour évaluer la correspondance entre les clusters obtenus et les types de véhicules initiaux. Cela nous permettra de comprendre si les groupes formés reflètent des différences significatives en termes de types de véhicules.
+
+```{r setup, include=TRUE}
+
+# Add the TYPE column back into the dataset
+histo_data$TYPE <- as.factor(histo_data$TYPE)
+
+# Analyze the relationship between clusters and original TYPE
+# Example for the 3 clusters from CAH
+histo_data$CAH_Cluster <- cutTree_3_clust
+
+# Cross-tabulation of original classes and clusters
+table(histo_data$TYPE, histo_data$CAH_Cluster)
+
+# Interpretation:
+# Create a summary of the clusters' characteristics based on the means of variables within each cluster
+cluster_summary <- aggregate(histo_data_no_type, by = list(Cluster = histo_data$CAH_Cluster), FUN = mean)
+
+# Print the summary for interpretation
+print(cluster_summary)
+
+# Visualize the clustering result
+ggplot(histo_data, aes(x = COMP, y = CIRC, color = CAH_Cluster)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Clusters from CAH vs. Original Vehicle Types",
+       x = "Compactness", 
+       y = "Circularity", 
+       color = "Cluster")
+
+# Compare with original TYPE distribution
+ggplot(histo_data, aes(x = COMP, y = CIRC, color = TYPE)) +
+  geom_point(alpha = 0.6) +
+  labs(title = "Original Vehicle Types Distribution",
+       x = "Compactness", 
+       y = "Circularity", 
+       color = "Vehicle Type")
+
+
+
+```
+
+
+
+
+
+## 4. Classification supervisée  
+- Procédez à l'apprentissage de l'arbre de classification pour la prédiction de la variable classe en fonction des variables restantes.  
+- Utilisez un protocole d'apprentissage et de tests par Bootstrap, dont vous préciserez les spécifications.  
+- Indiquez les performances (moyenne des erreurs de classification et variance des erreurs) de l'arbre appris.  
+- Visualisez puis interprétez l'arbre induit en indiquant les principales règles de décision.  
+
+```{r setup, include=TRUE}  
+library(rpart)
+library(rpart.plot)
+# Prepare the data
+# Get indices for each vehicle type
+bus_indices <- which(histo_data$TYPE == "bus")
+opel_indices <- which(histo_data$TYPE == "opel")
+saab_indices <- which(histo_data$TYPE == "saab")
+van_indices <- which(histo_data$TYPE == "van")
+
+# Sample 80% of indices for each type
+c <- c(
+  sample(bus_indices, round(0.8 * length(bus_indices))),
+  sample(opel_indices, round(0.8 * length(opel_indices))),
+  sample(saab_indices, round(0.8 * length(saab_indices))),
+  sample(van_indices, round(0.8 * length(van_indices)))
+)
+
+# Fit the tree
+fit <- rpart(TYPE ~ ., data = histo_data, subset = c, method = "class")
+
+# Use rpart.plot for visualization
+rpart.plot(fit, 
+           main = "Classification Tree for Vehicle Types",
+           extra = 106,  # Show predicted class and percentage
+           fallen.leaves = TRUE)
+
+# Predict on the remaining data (test set)
+predictions <- predict(fit, histo_data[-c, ], type = "class")
+confusion_matrix <- table(predictions, histo_data$TYPE[-c])
+print("Confusion Matrix:")
+print(confusion_matrix)
+
+# Calculate accuracy
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(paste("Accuracy:", round(accuracy * 100, 2), "%"))
+
+```
+
+
+## Enhanced version
+
+```{r setup, include=TRUE}  
+
+library(rpart)
+library(rpart.plot)
+
+# Bootstrap Function for Classification Tree
+bootstrap_classification_tree <- function(data, n_bootstraps = 100) {
+  # Ensure TYPE is a factor
+  data$TYPE <- as.factor(data$TYPE)
+  
+  # Initialize storage for error rates
+  classification_errors <- numeric(n_bootstraps)
+  
+  # Perform bootstrap iterations
+  for (i in 1:n_bootstraps) {
+    # Bootstrap sampling (with replacement)
+    set.seed(i)
+    bootstrap_indices <- sample(nrow(data), replace = TRUE)
+    train_data <- data[bootstrap_indices, ]
+    
+    # Identify out-of-bag sample
+    oob_indices <- setdiff(1:nrow(data), unique(bootstrap_indices))
+    test_data <- data[oob_indices, ]
+    
+    # Fit classification tree
+    fit <- rpart(TYPE ~ ., data = train_data, method = "class")
+    
+    # Predict on out-of-bag sample
+    predictions <- predict(fit, test_data, type = "class")
+    
+    # Calculate classification error
+    classification_errors[i] <- mean(predictions != test_data$TYPE)
+  }
+  
+  # Return performance metrics
+  list(
+    mean_error = mean(classification_errors),
+    error_variance = var(classification_errors)
+  )
+}
+
+# Perform bootstrap analysis
+performance <- bootstrap_classification_tree(histo_data)
+
+# Visualization of final tree
+final_tree <- rpart(TYPE ~ ., data = histo_data, method = "class")
+rpart.plot(final_tree, 
+           main = "Classification Tree for Vehicle Types",
+           extra = 106,  # Show predicted class and percentage
+           fallen.leaves = TRUE)
+
+# Detailed Accuracy Assessment
+predictions <- predict(final_tree, type = "class")
+confusion_matrix <- table(predictions, histo_data$TYPE)
+print("Confusion Matrix:")
+print(confusion_matrix)
+
+accuracy <- sum(diag(confusion_matrix)) / sum(confusion_matrix)
+print(paste("Overall Accuracy:", round(accuracy * 100, 2), "%"))
+
+```
+
+## 5. Conclusion  
+- Concluez et synthétisez les résultats de votre analyse décisionnelle.  
+
+---
+
+# B) Calendrier
+
+Votre projet est à remettre par email à l'adresse **Ahlame.Douzal@imag.fr** au plus tard le **vendredi 7 Février 2024 à 16h**, sous forme d’un fichier zip incluant les éléments suivants :  
+- Le manuscrit du projet en format PDF.  
+- Un répertoire **"Fig"** contenant tous les graphiques et figures générés.  
+- Un répertoire **"Source"** contenant l’ensemble de vos codes source et fonctions R utilisées.
+
+
+
+
+
+
+
